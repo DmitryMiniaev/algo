@@ -1,3 +1,4 @@
+//neerc.ifmo.ru/wiki/index.php?title=Решение_RMQ_с_помощью_разреженной_таблицы
 public class SparseTable {
 
     private final int N;
