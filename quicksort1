@@ -1,0 +1,23 @@
+	static void sort(int[] a, int l, int r) {
+		if(l < r) {
+			int p = partition(a, l, r);
+			sort(a, l, p - 1);
+			sort(a, p + 1, r);
+		}
+	}
+	
+	static int partition(int[] a, int l, int r) {
+        int indx = (int) (l + Math.random() * (r - l + 1));
+        int t = a[r];
+        a[r] = a[indx];
+        a[indx] = t;
+        int j = l - 1;
+        for(int i = l; i <= r; i++) {
+            if(a[r] >= a[i]) {
+                t = a[i];
+                a[i] = a[++j];
+                a[j] = t;
+            }
+        }
+        return j;
+    }
