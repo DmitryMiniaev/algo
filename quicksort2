@@ -1,0 +1,16 @@
+	static void sort(int[] a, int l, int r) {
+		int i = l, j = r, p = a[(int) (l + Math.random() * (r - l + 1))];
+		int t;
+		while(i <= j) {
+			while(a[i] < p) i++;
+			while(a[j] > p) j--;
+			if(i <= j) {
+				t = a[i];
+				a[i] = a[j];
+				a[j] = t;
+				i++; j--;
+			}
+		}
+		if(j > l) sort(a, l, j);
+		if(r > i) sort(a, i, r);
+	}
