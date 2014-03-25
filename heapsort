@@ -1,0 +1,29 @@
+	static void sort(int a[]) {
+		int n = a.length;
+		for(int i = n / 2; i >= 0; i--) {
+			heapify(a, i, n);
+		}
+		int t;
+		for(int i = n - 1; i >= 1; i--) {
+			t = a[0];
+			a[0] = a[i];
+			a[i] = t;
+			heapify(a, 0, i);
+		}
+	}
+	
+	static void heapify(int[] a, int x, int s)  {
+		int lc = x * 2 + 1;
+		int rc = x * 2 + 2;
+		int max = x;
+		if(lc < s && a[lc] > a[max]) {
+			max = lc;
+		}
+		if(rc < s && a[rc] > a[max]) { 
+			max = rc;
+		}
+		int t = a[max];
+		a[max] = a[x];
+		a[x] = t;
+		if(max != x) heapify(a, max, s);
+	}
