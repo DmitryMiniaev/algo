@@ -22,8 +22,10 @@
 		if(rc < s && a[rc] > a[max]) { 
 			max = rc;
 		}
-		int t = a[max];
-		a[max] = a[x];
-		a[x] = t;
-		if(max != x) heapify(a, max, s);
+		if(max != x) {
+			int t = a[max];
+			a[max] = a[x];
+			a[x] = t;
+		 	heapify(a, max, s);
+		}
 	}
