@@ -1,0 +1,33 @@
+static class DSU {
+		
+		int[] p;
+		int[] r;
+		
+		DSU(int n) { 
+			p = new int[n]; 
+			r = new int[n];
+			for(int i = 0; i < n; i++) {
+				p[i] = i;
+				r[i] = 1;
+			}
+		}
+		
+		void union(int a, int b) {
+			a = get(a);
+			b = get(b);
+			if(a != b) {
+				if(r[b] > r[a]) {
+					int t = b;
+					b = a;
+					a = t;
+				}
+				p[b] = a;
+				if(r[a] == r[b]) r[a]++;
+			}
+		}
+		
+		int get(int a) {
+			if(a == p[a]) return a;
+			return p[a] = get(p[a]);
+		}
+	}
