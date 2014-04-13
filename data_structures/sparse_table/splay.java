@@ -54,7 +54,7 @@ class SplayTree {
 					: ((gp.left == p && p.left == v) ||
 					  (gp.right == p && p.right == v)
 					  ? splay(rotate(rotate(gp, p), v))
-				      : splay(rotate(gp, rotate(p, v))));
+				          : splay(rotate(gp, rotate(p, v))));
 		}
 		
 		public boolean contains(int key) {
