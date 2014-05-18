@@ -1,8 +1,8 @@
-static class Fenwik {
+static class BIT {
         int[] t;
         int n;
         
-        Fenwik(int nn) { 
+        BIT(int nn) { 
           t = new int[n = nn];
         }
         
