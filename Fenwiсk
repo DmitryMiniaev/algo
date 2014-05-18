@@ -1,0 +1,22 @@
+static class Fenwik {
+        int[] t;
+        int n;
+        
+        Fenwik(int nn) { 
+          t = new int[n = nn];
+        }
+        
+        int sum (int r) {
+            int result = 0;
+            for (; r >= 0; r = (r & (r+1)) - 1) result += t[r];
+            return result;
+        }
+        
+        int sum (int l, int r) { 
+          return sum (r) - sum (l - 1);
+        }
+        
+        void inc (int i, int delta) { 
+          for (; i < n; i = (i | (i+1))) t[i] += delta; 
+        }
+}
