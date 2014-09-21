@@ -1,0 +1,22 @@
+    static void merge(int[] a, int left, int mid, int right) {
+        int i = left, j = mid, p = 0;
+        int[] b = new int[right - left + 1];
+        while (i < mid && j < right) b[p++] = (a[i] > a[j]) ? a[j++] : a[i++];
+        while (i < mid) b[p++] = a[i++];
+        while (j < right) b[p++] = a[j++];
+        while (p > 0) a[--right] = b[--p];
+    }
+
+    void solve() throws IOException {
+        int n = nextInt();
+        int[] a = new int[n];
+        for(int i = 0; i < n; i++) a[i] = nextInt();
+        for(int i = 1; i <= n; i <<= 1) {
+            for(int j = 0; j + i < n; j += i << 1) {
+                merge(a, j, j + i, Math.min(j + (i << 1), n));
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            System.out.print(a[i] + " ");
+        }
+    }
