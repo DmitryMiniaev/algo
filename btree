@@ -1,93 +1,70 @@
-package persistence;
-
 /**
  * @author dima
  * @date 11/4/14
  */
 public class BTree {
 
+    private MemoryManager mem;
     private int T;
     private int MAX_NODE_SIZE;
-    private Node root;
+    private Node globalRoot;
     private Pair pair = new Pair();
 
-    public BTree(int t) {
-        T = t;
-        MAX_NODE_SIZE = 2 * T + 1;
-        root = new Node();
-        root.leaf = true;
+    public BTree(MemoryManager memory) {
+        this.mem = memory;
+        T = mem.T;
+        MAX_NODE_SIZE = mem.getKeysPerNode();
+        globalRoot = mem.read(0);
+        globalRoot.leaf = true;
+        mem.write(globalRoot);
     }
 
     private static class Pair {
-        int key;
-        int val;
+        long key;
+        byte[] val;
 
-        Pair result(int key, int val) {
+        Pair result(long key, byte[] val) {
             this.key = key;
             this.val = val;
             return this;
         }
     }
 
-    private class Node {
-        boolean leaf;
-        int size;
-        int[] keys = new int[MAX_NODE_SIZE];
-        int[] vals = new int[MAX_NODE_SIZE];
-        Node[] c = new Node[MAX_NODE_SIZE + 1];
-
-        int index(int key) {
-            int i = 0;
-            while(i < size && key > keys[i]) i++;
-            return i;
-        }
-
-        void remove(int key) {
-            //removes if leaf
-            int i = 0;
-            while(i < size && key > keys[i]) i++;
-            for(int j = i + 1; j < size; j++) {
-                keys[j - 1] = keys[j];
-                vals[j - 1] = vals[j];
-            }
-            size--;
-        }
-    }
-
-    public Integer _get(Node node, int key) {
+    private byte[] _get(Node node, long key) {
         int j = 0, n = node.size;
         while (j < node.size && key > node.keys[j]) j++;
         if(j < n && key == node.keys[j]) return node.vals[j];
         if(node.leaf) return null;
-        return _get(node.c[j], key);
+        return _get(mem.read(node.c[j]), key);
     }
 
-    public Integer get(int key) {
-        Integer result =_get(root, key);
+    public byte[] get(long key) {
+        byte[] result =_get(globalRoot, key);
         if(result == null) return null;
         return result;
     }
 
-    public Integer getOrDefault(int key, Integer defaultValue) {
-        Integer result = get(key);
+    public byte[] getOrDefault(long key, byte[] defaultValue) {
+        byte[] result = get(key);
         if(result == null) return defaultValue;
         return result;
     }
 
-    public void put(int key, int val) {
-        if(root.size == MAX_NODE_SIZE) {
-            Node newOne = new Node();
-            newOne.c[0] = root;
-            root = newOne;
-            split(root, 0, newOne.c[0]);
-            _put(root, key, val);
+    public void put(long key, byte[] val) {
+        if(globalRoot.size == MAX_NODE_SIZE) {
+            Node newRoot = mem.alloc();
+            Node oldRoot = globalRoot;
+            newRoot.c[0] = oldRoot.address;
+            globalRoot = newRoot;
+            split(newRoot, 0, oldRoot);
+            _put(newRoot, key, val);
         } else {
-            _put(root, key, val);
+            _put(globalRoot, key, val);
         }
     }
 
     private void split(Node x, int i, Node y) {
-        Node z = new Node();
+        Node z = mem.alloc();
         z.leaf = y.leaf;
         int mid = MAX_NODE_SIZE / 2;
         for(int j = mid + 1; j < MAX_NODE_SIZE; j++) {
@@ -110,11 +87,14 @@ public class BTree {
         for(int j = x.size; j >= i + 1; j--) {
             x.c[j + 1] = x.c[j];
         }
-        x.c[i + 1] = z;
+        x.c[i + 1] = z.address;
         x.size++;
+        mem.write(x);
+        mem.write(y);
+        mem.write(z);
     }
 
-    private void _put(Node node, int key, int val) {
+    private void _put(Node node, long key, byte[] val) {
         int i = node.size - 1;
         if(node.leaf) {
             while (i >= 0 && key < node.keys[i]) {
@@ -125,22 +105,23 @@ public class BTree {
             node.keys[i + 1] = key;
             node.vals[i + 1] = val;
             node.size++;
+            mem.write(node);
         } else {
             while (i >= 0 && key < node.keys[i]) i--;
             i++;
-            Node child = node.c[i];
+            Node child = mem.read(node.c[i]);
             if(child.size == MAX_NODE_SIZE) {
                 split(node, i, child);
                 if(key > node.keys[i]) i++;
             }
-            _put(node.c[i], key, val);
+            _put(mem.read(node.c[i]), key, val);
         }
     }
 
     private Pair getPrev(Node root) {
         Node cur = root;
         while (!cur.leaf) {
-            cur = cur.c[cur.size];
+            cur = mem.read(cur.c[cur.size]);
         }
         int n = cur.size - 1;
         return pair.result(cur.keys[n], cur.vals[n]);
@@ -149,61 +130,91 @@ public class BTree {
     private Pair getNext(Node root) {
         Node cur = root;
         while (!cur.leaf) {
-            cur = cur.c[0];
+            cur = mem.read(cur.c[0]);
         }
-        int key = cur.keys[0];
-        int val = cur.vals[0];
+        long key = cur.keys[0];
+        byte[] val = cur.vals[0];
         return pair.result(key, val);
     }
 
-    public boolean remove(int key) {
-        return _remove(root, key);
+    public boolean remove(long key) {
+        return _remove(null, globalRoot, key);
     }
 
-    private boolean _remove(Node root, int key) {
+    public void print() {
+        _print(globalRoot);
+    }
+
+    private void _print(Node root) {
+        for (int i = 0; i < root.size; i++) {
+            System.out.print(root.vals[i]);
+        }
+        System.out.println("\n------------");
+        if(root.leaf) return;
+        for (int i = 0; i < root.size + 1; i++) {
+            _print(mem.read(root.c[i]));
+        }
+    }
+
+    private boolean _remove(Node rootParent, Node root, long key) {
         int idx = root.index(key);
         if(idx < root.size && root.keys[idx] == key) {
             if(root.leaf) {
                 root.remove(key);
+                mem.write(root);
                 return true;
             } else {
-                Node lc = root.c[idx];
-                Node rc = root.c[idx + 1];
+                Node lc = mem.read(root.c[idx]);
+                Node rc = mem.read(root.c[idx + 1]);
                 if(lc.size >= T + 1) {
                     Pair p = getPrev(lc);
                     root.keys[idx] = p.key;
                     root.vals[idx] = p.val;
-                    return _remove(lc, p.key);
+                    mem.write(root); //??? extra write
+                    return _remove(root, lc, p.key);
                 } else if(rc.size >= T + 1) {
                     Pair p = getNext(rc);
                     root.keys[idx] = p.key;
                     root.vals[idx] = p.val;
-                    return _remove(rc, p.key);
+                    mem.write(root); //??? extra write
+                    return _remove(root, rc, p.key);
                 } else {
                     Node merged = merge(root, idx, lc, rc);
-                    return _remove(merged, key);
+                    if(merged != root) return _removeAndReplace(rootParent, idx, merged, key);
+                    return _remove(root, merged, key);
                 }
             }
         } else {
             if(root.leaf) return false;
-            Node child = root.c[idx];
+            Node child = mem.read(root.c[idx]);
             if(child.size == T) {
                 int ls = idx - 1;
                 int rs = idx + 1;
-                if (ls >= 0 && root.c[ls].size >= T + 1) {
-                    borrowLeft(child, root, root.c[ls], ls);
-                } else if (rs < root.size + 1 && root.c[rs].size >= T + 1) {
-                    borrowRight(child, root, root.c[rs], idx);
+                Node left = (ls >= 0) ? mem.read(root.c[ls]) : null;
+                Node right = (rs < root.size + 1) ? mem.read(root.c[rs]) : null;
+                if (left != null && left.size >= T + 1) {
+                    borrowLeft(child, root, left, ls);
+                } else if (right != null && right.size >= T + 1) {
+                    borrowRight(child, root, right, idx);
                 } else {
                     if(ls >= 0) {
-                        child = merge(root, ls, root.c[ls], child);
+                        child = merge(root, ls, left, child);
+                        if(child != root) return _removeAndReplace(rootParent, ls, child, key);
                     } else{
-                        child = merge(root, idx, child, root.c[rs]);
+                        child = merge(root, idx, child, right);
+                        if(child != root) return _removeAndReplace(rootParent, idx, child, key);
                     }
                 }
             }
-            return _remove(child, key);
+            return _remove(root, child, key);
         }
+    }
+
+    private boolean _removeAndReplace(Node parentRoot, int rootIdx, Node child, long key) {
+        if(parentRoot == null) return _remove(parentRoot, globalRoot = child, key);
+        parentRoot.c[rootIdx] = child.address;
+        mem.write(parentRoot);
+        return _remove(parentRoot, child, key);
     }
 
     private Node merge(Node root, int idx, Node lc, Node rc) {
@@ -228,20 +239,28 @@ public class BTree {
             root.c[j] = root.c[j + 1];
         }
         root.size--;
+        mem.write(lc);
+        mem.write(rc);
+        if(root.size == 0) {
+            root.deleted = true;
+            mem.write(root);
+            return lc;
+        }
+        mem.write(root);
         return root;
     }
 
     private void borrowLeft(Node node, Node root, Node sibling, int sepId) {
-        int sKey;
-        int sVal;
-        Node sNode;
+        long sKey;
+        byte[] sVal;
+        long nodeAddr;
         sKey = sibling.keys[sibling.size - 1];
         sVal = sibling.vals[sibling.size - 1];
-        sNode = sibling.c[sibling.size];
+        nodeAddr = sibling.c[sibling.size];
         sibling.size--;
 
-        int rKey = root.keys[sepId];
-        int rVal = root.vals[sepId];
+        long rKey = root.keys[sepId];
+        byte[] rVal = root.vals[sepId];
         root.keys[sepId] = sKey;
         root.vals[sepId] = sVal;
 
@@ -254,17 +273,21 @@ public class BTree {
         }
         node.keys[0] = rKey;
         node.vals[0] = rVal;
-        node.c[0] = sNode;
+        node.c[0] = nodeAddr;
         node.size++;
+
+        mem.write(node);
+        mem.write(root);
+        mem.write(sibling);
     }
 
     private void borrowRight(Node node, Node root, Node sibling, int sepId) {
-        int sKey;
-        int sVal;
-        Node sNode;
+        long sKey;
+        byte[] sVal;
+        long nodeAddr;
         sKey = sibling.keys[0];
         sVal = sibling.vals[0];
-        sNode = sibling.c[0];
+        nodeAddr = sibling.c[0];
         for(int i = 1; i < sibling.size; i++) {
             sibling.keys[i - 1] = sibling.keys[i];
             sibling.vals[i - 1] = sibling.vals[i];
@@ -273,15 +296,22 @@ public class BTree {
             sibling.c[i - 1] = sibling.c[i];
         }
         sibling.size--;
-        int rKey = root.keys[sepId];
-        int rVal = root.vals[sepId];
+        long rKey = root.keys[sepId];
+        byte[] rVal = root.vals[sepId];
         root.keys[sepId] = sKey;
         root.vals[sepId] = sVal;
 
         node.keys[node.size] = rKey;
         node.vals[node.size] = rVal;
-        node.c[node.size + 1] = sNode;
+        node.c[node.size + 1] = nodeAddr;
         node.size++;
+
+        mem.write(node);
+        mem.write(root);
+        mem.write(sibling);
     }
 
+    public void dispose() {
+        mem.dispose();
+    }
 }
