@@ -1,31 +1,37 @@
     static class Queue {
-        static class Stack {
+        BiFunction<Integer, Integer, Integer> f;
+        int indentity;
+        int size;
+        class Stack {
             int size;
             int[][] s;
             Stack(int c) {
                 s = new int[c][2];
             }
             void push(int item) {
-                s[size][1] = size == 0 ? item : max(item, s[size - 1][1]);
+                s[size][1] = size == 0 ? item : f.apply(item, s[size - 1][1]);
                 s[size++][0] = item;
             }
-            int maxF() {return size == 0 ? Integer.MIN_VALUE : s[size - 1][1]; }
+            int f() {return size == 0 ? indentity : s[size - 1][1]; }
             int pop() { return s[--size][0]; }
         }
         Stack st1;
         Stack st2;
-        Queue(int c) {
+        Queue(int c, BiFunction<Integer, Integer, Integer> f, int indentity) {
+            this.f = f;
+            this.indentity = indentity;
             st1 = new Stack(c);
             st2 = new Stack(c);
         }
-        void enq(int elem) { st1.push(elem);}
+        void enq(int elem) { st1.push(elem); size++; }
         int deq() {
             if(st2.size == 0) {
                 while (st1.size != 0) {
                     st2.push(st1.pop());
                 }
             }
+            size--;
             return st2.pop();
         }
-        int maxF() { return max(st1.maxF(), st2.maxF());}
+        int f() { return f.apply(st1.f(), st2.f());}
     }
